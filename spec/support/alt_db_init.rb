@@ -7,6 +7,10 @@ require_relative "paper_trail_spec_migrator"
 # connection for the namespaces to simulate an application with multiple
 # database connections.
 
+# This is all going to change in rails 6. See "RailsConf 2018: Keynote: The
+# Future of Rails 6: Scalable by Default by Eileen Uchitelle"
+# https://www.youtube.com/watch?v=8evXWvM4oXM
+
 # Load database yaml to use
 configs = YAML.load_file("#{Rails.root}/config/database.yml")
 
@@ -36,8 +40,7 @@ end
 Foo::Base.configurations = configs
 Foo::Base.establish_connection(:foo)
 ActiveRecord::Base.establish_connection(:foo)
-paper_trail_migrations_path = File.expand_path("#{db_directory}/migrate/", __FILE__)
-::PaperTrailSpecMigrator.new(paper_trail_migrations_path).migrate
+::PaperTrailSpecMigrator.new.migrate
 
 module Bar
   class Base < ActiveRecord::Base
@@ -56,4 +59,4 @@ end
 Bar::Base.configurations = configs
 Bar::Base.establish_connection(:bar)
 ActiveRecord::Base.establish_connection(:bar)
-::PaperTrailSpecMigrator.new(paper_trail_migrations_path).migrate
+::PaperTrailSpecMigrator.new.migrate

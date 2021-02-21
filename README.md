@@ -1,6 +1,8 @@
 # PaperTrail
 
 [![Build Status][4]][5]
+[![Gem Version][53]][54]
+[![SemVer][55]][56]
 
 Track changes to your models, for auditing or versioning. See how a model looked
 at any stage in its lifecycle, revert it to any version, or restore it after it
@@ -11,6 +13,7 @@ has been destroyed.
 | Version        | Documentation |
 | -------------- | ------------- |
 | Unreleased     | https://github.com/paper-trail-gem/paper_trail/blob/master/README.md |
+| 10.0.0         | https://github.com/paper-trail-gem/paper_trail/blob/v10.0.0/README.md |
 | 9.2.0          | https://github.com/paper-trail-gem/paper_trail/blob/v9.2.0/README.md |
 | 8.1.2          | https://github.com/paper-trail-gem/paper_trail/blob/v8.1.2/README.md |
 | 7.1.3          | https://github.com/paper-trail-gem/paper_trail/blob/v7.1.3/README.md |
@@ -77,18 +80,19 @@ has been destroyed.
 
 ### 1.a. Compatibility
 
-| paper_trail    | branch     | tags   | ruby     | activerecord  |
-| -------------- | ---------- | ------ | -------- | ------------- |
-| unreleased     | master     |        | >= 2.3.0 | >= 4.2, < 6   |
-| 9              | 9-stable   | v9.x   | >= 2.3.0 | >= 4.2, < 6   |
-| 8              | 8-stable   | v8.x   | >= 2.2.0 | >= 4.2, < 5.2 |
-| 7              | 7-stable   | v7.x   | >= 2.1.0 | >= 4.0, < 5.2 |
-| 6              | 6-stable   | v6.x   | >= 1.9.3 | >= 4.0, < 5.2 |
-| 5              | 5-stable   | v5.x   | >= 1.9.3 | >= 3.0, < 5.1 |
-| 4              | 4-stable   | v4.x   | >= 1.8.7 | >= 3.0, < 5.1 |
-| 3              | 3.0-stable | v3.x   | >= 1.8.7 | >= 3.0, < 5   |
-| 2              | 2.7-stable | v2.x   | >= 1.8.7 | >= 3.0, < 4   |
-| 1              | rails2     | v1.x   | >= 1.8.7 | >= 2.3, < 3   |
+| paper_trail    | branch     | ruby     | activerecord  |
+| -------------- | ---------- | -------- | ------------- |
+| unreleased     | master     | >= 2.3.0 | >= 4.2, < 6   |
+| 10             | 10-stable  | >= 2.3.0 | >= 4.2, < 6   |
+| 9              | 9-stable   | >= 2.3.0 | >= 4.2, < 6   |
+| 8              | 8-stable   | >= 2.2.0 | >= 4.2, < 5.2 |
+| 7              | 7-stable   | >= 2.1.0 | >= 4.0, < 5.2 |
+| 6              | 6-stable   | >= 1.9.3 | >= 4.0, < 5.2 |
+| 5              | 5-stable   | >= 1.9.3 | >= 3.0, < 5.1 |
+| 4              | 4-stable   | >= 1.8.7 | >= 3.0, < 5.1 |
+| 3              | 3.0-stable | >= 1.8.7 | >= 3.0, < 5   |
+| 2              | 2.7-stable | >= 1.8.7 | >= 3.0, < 4   |
+| 1              | rails2     | >= 1.8.7 | >= 2.3, < 3   |
 
 ### 1.b. Installation
 
@@ -99,13 +103,18 @@ has been destroyed.
 1. Add a `versions` table to your database and an initializer file for configuration:
 
     ```
-    bundle exec rails generate paper_trail:install
-    bundle exec rake db:migrate
+    bundle exec rails generate paper_trail:install [--with-changes] [--with-associations]
     ```
 
-    If using [rails_admin][38], you must enable the experimental
-    [Associations](#4b-associations) feature. For more information on this
-    generator, see [section 5.c. Generators](#5c-generators).
+    For more information on this generator, see [section 5.c.
+    Generators](#5c-generators).
+
+    If using [rails_admin][38], you must enable the
+    experimental [Associations](#4b-associations) feature.
+
+    ```
+    bundle exec rake db:migrate
+    ```
 
 1. Add `has_paper_trail` to the models you want to track.
 
@@ -359,10 +368,6 @@ the record has not changed.
 ```ruby
 my_model.paper_trail.save_with_version
 ```
-
-There is a similar method, `touch_with_version`, which was deprecated in
-9.0.0 and will be removed. `save_with_version` serves a similar purpose, but
-it's a save, not a touch.
 
 ### 2.c. Choosing Attributes To Monitor
 
@@ -725,10 +730,6 @@ For diffing two ActiveRecord objects:
 * [activerecord-diff][23]: rather like ActiveRecord::Dirty but also allows you
   to specify which columns to compare.
 
-If you want to selectively record changes for some models but not others you
-can opt out of recording changes by passing `save_changes: false` to your
-`has_paper_trail` method declaration.
-
 ### 3.d. Deleting Old Versions
 
 Over time your `versions` table will grow to an unwieldy size.  Because each
@@ -763,7 +764,7 @@ required.
 
 ```ruby
 PaperTrail.request.whodunnit = proc do
-  caller.first{ |c| c.starts_with? Rails.root.to_s }
+  caller.find { |c| c.starts_with? Rails.root.to_s }
 end
 ```
 
@@ -850,10 +851,29 @@ these issues, PT-AT was extracted (see
 https://github.com/paper-trail-gem/paper_trail/issues/1070).
 
 Even though this has always been an experimental feature, we don't want the
-extraction of PT-AT to be a breaking change. So, `paper_trail` will have a
-runtime dependency on this gem and will keep running the existing tests related
-to association tracking. This arrangement will be maintained for a few years, if
-practical.
+extraction of PT-AT to be a breaking change. In PT 9, PT-AT was kept as a
+runtime dependency. In PT 10, it is a development dependency, so if you use it
+you must add it to your own `Gemfile`. We will keep PT-AT as a development
+dependency and continue running the existing tests related to association
+tracking for as long as is practical.
+
+#### 4.b.1 The optional `item_subtype` column
+
+As of PT 10, users may add an `item_subtype` column to their `versions` table.
+When storing versions for STI models, rails stores the base class in `item_type`
+(that's just how polymorphic associations like `item` work) In addition, PT will
+now store the subclass in `item_subtype`. If this column is present PT-AT will
+use it to fix a rare issue with reification of STI subclasses.
+
+```ruby
+add_column :versions, :item_subtype, null: true
+```
+
+So, if you use PT-AT and STI, the addition of this colulmn is recommended.
+
+- https://github.com/paper-trail-gem/paper_trail/issues/594
+- https://github.com/paper-trail-gem/paper_trail/pull/1143
+- https://github.com/westonganger/paper_trail-association_tracking/pull/5
 
 ### 4.c. Storing Metadata
 
@@ -1030,7 +1050,7 @@ path to the class (e.g. `Foo::BarVersion` if your class is inside the module
 
 1. For models which have a lot of versions, storing each model's versions in a
    separate table can improve the performance of certain database queries.
-1. Store different version [metadata](#storing-metadata) for different models.
+1. Store different version [metadata](#4c-storing-metadata) for different models.
 
 #### Configuration
 
@@ -1208,7 +1228,15 @@ A valid adapter is a class that contains the following methods:
 2. load_changeset: Returns the changeset for a given version object
 3. where_object_changes: Returns the records resulting from the given hash of attributes.
 
+To preserve the default behavior for some of these, don't define them in your adapter.
+
 For an example of such an implementation, see [paper_trail-hashdiff](https://github.com/hashwin/paper_trail-hashdiff)
+
+### 6.d. Excluding the Object Column
+
+The `object` column ends up storing a lot of duplicate data if you have models that have many columns,
+and that are updated many times. You can save ~50% of storage space by removing the column from the
+versions table. It's important to note that this will disable `reify` and `where_object`.
 
 ## 7. Testing
 
@@ -1542,3 +1570,7 @@ Released under the MIT licence.
 [50]: https://github.com/izelnakri/paper_trail
 [51]: https://github.com/rikkipitt/rails_admin_history_rollback
 [52]: http://guides.rubyonrails.org/active_record_callbacks.html
+[53]: https://badge.fury.io/rb/paper_trail.svg
+[54]: https://rubygems.org/gems/paper_trail
+[55]: https://api.dependabot.com/badges/compatibility_score?dependency-name=paper_trail&package-manager=bundler&version-scheme=semver
+[56]: https://dependabot.com/compatibility-score.html?dependency-name=paper_trail&package-manager=bundler&version-scheme=semver

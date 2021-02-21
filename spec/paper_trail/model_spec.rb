@@ -71,6 +71,14 @@ RSpec.describe(::PaperTrail, versioning: true) do
           expect(changeset[:c]).to eq("d")
           expect(adapter).to have_received(:load_changeset)
         end
+
+        it "defaults to the original behavior" do
+          adapter = Class.new.new
+          PaperTrail.config.object_changes_adapter = adapter
+          widget = Widget.create(name: "Henry")
+          changeset = widget.versions.last.changeset
+          expect(changeset[:name]).to eq([nil, "Henry"])
+        end
       end
     end
 
@@ -264,11 +272,18 @@ RSpec.describe(::PaperTrail, versioning: true) do
           expect(widget.versions.last.item).to be_nil
         end
 
-        it "not have changes" do
-          widget = Widget.create(name: "Henry")
-          widget.update_attributes(name: "Harry")
-          widget.destroy
-          expect(widget.versions.last.changeset).to eq({})
+        it "has changes" do
+          book = Book.create! title: "A"
+          changes = YAML.load book.versions.last.attributes["object_changes"]
+          expect(changes).to eq("id" => [nil, book.id], "title" => [nil, "A"])
+
+          book.update! title: "B"
+          changes = YAML.load book.versions.last.attributes["object_changes"]
+          expect(changes).to eq("title" => %w[A B])
+
+          book.destroy
+          changes = YAML.load book.versions.last.attributes["object_changes"]
+          expect(changes).to eq("id" => [book.id, nil], "title" => ["B", nil])
         end
       end
     end
@@ -400,15 +415,6 @@ RSpec.describe(::PaperTrail, versioning: true) do
         end
       end
 
-      context "when destroyed \"without versioning\"" do
-        it "leave paper trail off after call" do
-          allow(::ActiveSupport::Deprecation).to receive(:warn)
-          @widget.paper_trail.without_versioning(:destroy)
-          expect(::PaperTrail.request.enabled_for_model?(Widget)).to eq(false)
-          expect(::ActiveSupport::Deprecation).to have_received(:warn).once
-        end
-      end
-
       context "and then its paper trail turned on" do
         before do
           PaperTrail.request.enable_model(Widget)
@@ -419,31 +425,6 @@ RSpec.describe(::PaperTrail, versioning: true) do
 
           it "add to its trail" do
             expect(@widget.versions.length).to(eq((@count + 1)))
-          end
-        end
-
-        context "when updated \"without versioning\"" do
-          it "does not create new version" do
-            allow(::ActiveSupport::Deprecation).to receive(:warn)
-            @widget.paper_trail.without_versioning do
-              @widget.update_attributes(name: "Ford")
-            end
-            @widget.paper_trail.without_versioning do |w|
-              w.update_attributes(name: "Nixon")
-            end
-            expect(@widget.versions.length).to(eq(@count))
-            expect(PaperTrail.request.enabled_for_model?(Widget)).to eq(true)
-            expect(::ActiveSupport::Deprecation).to have_received(:warn).twice
-          end
-        end
-
-        context "given a symbol, specifying a method name" do
-          it "does not create a new version" do
-            allow(::ActiveSupport::Deprecation).to receive(:warn)
-            @widget.paper_trail.without_versioning(:touch)
-            expect(::ActiveSupport::Deprecation).to have_received(:warn).once
-            expect(@widget.versions.length).to(eq(@count))
-            expect(::PaperTrail.request.enabled_for_model?(Widget)).to eq(true)
           end
         end
       end
@@ -755,74 +736,79 @@ RSpec.describe(::PaperTrail, versioning: true) do
       expect(@widget.paper_trail.previous_version).to(eq(@widget.versions[-2].reify))
     end
   end
+  # rubocop:enable RSpec/InstanceVariable
 
-  context "A non-reified item" do
-    before { @widget = Widget.new }
-
-    it "not have a previous version" do
-      expect(@widget.paper_trail.previous_version).to(be_nil)
-    end
-
-    it "not have a next version" do
-      expect(@widget.paper_trail.next_version).to(be_nil)
-    end
-
-    context "with versions" do
-      before do
-        @widget.save
+  describe "#next_version" do
+    context "a reified item" do
+      it "returns the object (not a Version) as it became next" do
+        widget = Widget.create(name: "Bob")
         %w[Tom Dick Jane].each do |name|
-          @widget.update_attributes(name: name)
+          widget.update_attributes(name: name)
         end
+        second_widget = widget.versions[1].reify
+        last_widget = widget.versions.last.reify
+        expect(second_widget.paper_trail.next_version.name).to(eq(widget.versions[2].reify.name))
+        expect(widget.name).to(eq(last_widget.paper_trail.next_version.name))
       end
+    end
 
-      it "have a previous version" do
-        expect(@widget.paper_trail.previous_version.name).to(eq(@widget.versions.last.reify.name))
-      end
-
-      it "not have a next version" do
-        expect(@widget.paper_trail.next_version).to(be_nil)
+    context "a non-reified item" do
+      it "always returns nil because cannot ever have a next version" do
+        widget = Widget.new
+        expect(widget.paper_trail.next_version).to(be_nil)
+        widget.save
+        %w[Tom Dick Jane].each do |name|
+          widget.update_attributes(name: name)
+        end
+        expect(widget.paper_trail.next_version).to(be_nil)
       end
     end
   end
 
-  context "A reified item" do
-    before do
-      @widget = Widget.create(name: "Bob")
-      %w[Tom Dick Jane].each do |name|
-        @widget.update_attributes(name: name)
+  describe "#previous_version" do
+    context "a reified item" do
+      it "returns the object (not a Version) as it was most recently" do
+        widget = Widget.create(name: "Bob")
+        %w[Tom Dick Jane].each do |name|
+          widget.update_attributes(name: name)
+        end
+        second_widget = widget.versions[1].reify
+        last_widget = widget.versions.last.reify
+        expect(second_widget.paper_trail.previous_version).to(be_nil)
+        expect(last_widget.paper_trail.previous_version.name).to(eq(widget.versions[-2].reify.name))
       end
-      @second_widget = @widget.versions[1].reify
-      @last_widget = @widget.versions.last.reify
     end
 
-    it "have a previous version" do
-      expect(@second_widget.paper_trail.previous_version).to(be_nil)
-      expect(@last_widget.paper_trail.previous_version.name).to(eq(@widget.versions[-2].reify.name))
-    end
-
-    it "have a next version" do
-      expect(@second_widget.paper_trail.next_version.name).to(eq(@widget.versions[2].reify.name))
-      expect(@widget.name).to(eq(@last_widget.paper_trail.next_version.name))
+    context "a non-reified item" do
+      it "returns the object (not a Version) as it was most recently" do
+        widget = Widget.new
+        expect(widget.paper_trail.previous_version).to(be_nil)
+        widget.save
+        %w[Tom Dick Jane].each do |name|
+          widget.update_attributes(name: name)
+        end
+        expect(widget.paper_trail.previous_version.name).to(eq(widget.versions.last.reify.name))
+      end
     end
   end
 
   context ":has_many :through" do
-    before do
-      @book = Book.create(title: "War and Peace")
-      @dostoyevsky = Person.create(name: "Dostoyevsky")
-      @solzhenitsyn = Person.create(name: "Solzhenitsyn")
-    end
-
     it "store version on source <<" do
+      book = Book.create(title: "War and Peace")
+      dostoyevsky = Person.create(name: "Dostoyevsky")
+      Person.create(name: "Solzhenitsyn")
       count = PaperTrail::Version.count
-      (@book.authors << @dostoyevsky)
+      (book.authors << dostoyevsky)
       expect((PaperTrail::Version.count - count)).to(eq(1))
-      expect(@book.authorships.first.versions.first).to(eq(PaperTrail::Version.last))
+      expect(book.authorships.first.versions.first).to(eq(PaperTrail::Version.last))
     end
 
     it "store version on source create" do
+      book = Book.create(title: "War and Peace")
+      Person.create(name: "Dostoyevsky")
+      Person.create(name: "Solzhenitsyn")
       count = PaperTrail::Version.count
-      @book.authors.create(name: "Tolstoy")
+      book.authors.create(name: "Tolstoy")
       expect((PaperTrail::Version.count - count)).to(eq(2))
       expect(
         [PaperTrail::Version.order(:id).to_a[-2].item, PaperTrail::Version.last.item]
@@ -830,24 +816,29 @@ RSpec.describe(::PaperTrail, versioning: true) do
     end
 
     it "store version on join destroy" do
-      (@book.authors << @dostoyevsky)
+      book = Book.create(title: "War and Peace")
+      dostoyevsky = Person.create(name: "Dostoyevsky")
+      Person.create(name: "Solzhenitsyn")
+      (book.authors << dostoyevsky)
       count = PaperTrail::Version.count
-      @book.authorships.reload.last.destroy
+      book.authorships.reload.last.destroy
       expect((PaperTrail::Version.count - count)).to(eq(1))
-      expect(PaperTrail::Version.last.reify.book).to(eq(@book))
-      expect(PaperTrail::Version.last.reify.author).to(eq(@dostoyevsky))
+      expect(PaperTrail::Version.last.reify.book).to(eq(book))
+      expect(PaperTrail::Version.last.reify.author).to(eq(dostoyevsky))
     end
 
     it "store version on join clear" do
-      (@book.authors << @dostoyevsky)
+      book = Book.create(title: "War and Peace")
+      dostoyevsky = Person.create(name: "Dostoyevsky")
+      Person.create(name: "Solzhenitsyn")
+      book.authors << dostoyevsky
       count = PaperTrail::Version.count
-      @book.authorships.reload.destroy_all
+      book.authorships.reload.destroy_all
       expect((PaperTrail::Version.count - count)).to(eq(1))
-      expect(PaperTrail::Version.last.reify.book).to(eq(@book))
-      expect(PaperTrail::Version.last.reify.author).to(eq(@dostoyevsky))
+      expect(PaperTrail::Version.last.reify.book).to(eq(book))
+      expect(PaperTrail::Version.last.reify.author).to(eq(dostoyevsky))
     end
   end
-  # rubocop:enable RSpec/InstanceVariable
 
   context "the default accessor, length=, is overwritten" do
     it "returns overwritten value on reified instance" do

@@ -4,27 +4,6 @@ module PaperTrail
   # Configures an ActiveRecord model, mostly at application boot time, but also
   # sometimes mid-request, with methods like enable/disable.
   class ModelConfig
-    DPR_DISABLE = <<-STR.squish.freeze
-      MyModel.paper_trail.disable is deprecated, use
-      PaperTrail.request.disable_model(MyModel). This new API makes it clear
-      that only the current request is affected, not all threads. Also, all
-      other request-variables now go through the same `request` method, so this
-      new API is more consistent.
-    STR
-    DPR_ENABLE = <<-STR.squish.freeze
-      MyModel.paper_trail.enable is deprecated, use
-      PaperTrail.request.enable_model(MyModel). This new API makes it clear
-      that only the current request is affected, not all threads. Also, all
-      other request-variables now go through the same `request` method, so this
-      new API is more consistent.
-    STR
-    DPR_ENABLED = <<-STR.squish.freeze
-      MyModel.paper_trail.enabled? is deprecated, use
-      PaperTrail.request.enabled_for_model?(MyModel). This new API makes it clear
-      that this is a setting specific to the current request, not all threads.
-      Also, all other request-variables now go through the same `request`
-      method, so this new API is more consistent.
-    STR
     E_CANNOT_RECORD_AFTER_DESTROY = <<-STR.strip_heredoc.freeze
       paper_trail.on_destroy(:after) is incompatible with ActiveRecord's
       belongs_to_required_by_default. Use on_destroy(:before)
@@ -42,24 +21,6 @@ module PaperTrail
 
     def initialize(model_class)
       @model_class = model_class
-    end
-
-    # @deprecated
-    def disable
-      ::ActiveSupport::Deprecation.warn(DPR_DISABLE, caller(1))
-      ::PaperTrail.request.disable_model(@model_class)
-    end
-
-    # @deprecated
-    def enable
-      ::ActiveSupport::Deprecation.warn(DPR_ENABLE, caller(1))
-      ::PaperTrail.request.enable_model(@model_class)
-    end
-
-    # @deprecated
-    def enabled?
-      ::ActiveSupport::Deprecation.warn(DPR_ENABLED, caller(1))
-      ::PaperTrail.request.enabled_for_model?(@model_class)
     end
 
     # Adds a callback that records a version after a "create" event.
@@ -169,22 +130,31 @@ module PaperTrail
     end
 
     def setup_associations(options)
+      # @api private - version_association_name
       @model_class.class_attribute :version_association_name
       @model_class.version_association_name = options[:version] || :version
 
       # The version this instance was reified from.
+      # @api public
       @model_class.send :attr_accessor, @model_class.version_association_name
 
+      # @api private - `version_class_name` - However, `rails_admin` has been
+      # using it since 2014 (see `rails_admin/extensions/paper_trail/auditing_adapter.rb`,
+      # https://github.com/sferik/rails_admin/commit/959e1bd4e47e0369d264b58bbbe972ff863767cd)
+      # In PR _____ () we ask them to use `paper_trail_options` instead.
       @model_class.class_attribute :version_class_name
       @model_class.version_class_name = options[:class_name] || "PaperTrail::Version"
 
+      # @api private - versions_association_name
       @model_class.class_attribute :versions_association_name
       @model_class.versions_association_name = options[:versions] || :versions
 
+      # @api public - paper_trail_event
       @model_class.send :attr_accessor, :paper_trail_event
 
       assert_concrete_activerecord_class(@model_class.version_class_name)
 
+      # @api public
       @model_class.has_many(
         @model_class.versions_association_name,
         -> { order(model.timestamp_sort_order) },
@@ -200,6 +170,9 @@ module PaperTrail
     end
 
     def setup_options(options)
+      # @api public - paper_trail_options - Let's encourage plugins to use
+      # eg. `paper_trail_options[:class_name]` rather than `version_class_name`
+      # because the former is documented and the latter is not.
       @model_class.class_attribute :paper_trail_options
       @model_class.paper_trail_options = options.dup
 
@@ -211,9 +184,6 @@ module PaperTrail
       end
 
       @model_class.paper_trail_options[:meta] ||= {}
-      if @model_class.paper_trail_options[:save_changes].nil?
-        @model_class.paper_trail_options[:save_changes] = true
-      end
     end
   end
 end
