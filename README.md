@@ -8,14 +8,12 @@ Track changes to your models, for auditing or versioning. See how a model looked
 at any stage in its lifecycle, revert it to any version, or restore it after it
 has been destroyed.
 
-As of March 2019, we are [temporarily not accepting issues][57]. Pull requests
-are welcome.
-
 ## Documentation
 
 | Version        | Documentation |
 | -------------- | ------------- |
 | Unreleased     | https://github.com/paper-trail-gem/paper_trail/blob/master/README.md |
+| 11.0.0         | https://github.com/paper-trail-gem/paper_trail/blob/v11.0.0/README.md |
 | 10.3.1         | https://github.com/paper-trail-gem/paper_trail/blob/v10.3.1/README.md |
 | 9.2.0          | https://github.com/paper-trail-gem/paper_trail/blob/v9.2.0/README.md |
 | 8.1.2          | https://github.com/paper-trail-gem/paper_trail/blob/v8.1.2/README.md |
@@ -85,7 +83,8 @@ are welcome.
 
 | paper_trail    | branch     | ruby     | activerecord  |
 | -------------- | ---------- | -------- | ------------- |
-| unreleased     | master     | >= 2.3.0 | >= 4.2, < 6.1 |
+| unreleased     | master     | >= 2.4.0 | >= 5.2, < 6.1 |
+| 11             | master     | >= 2.4.0 | >= 5.2, < 6.1 |
 | 10             | 10-stable  | >= 2.3.0 | >= 4.2, < 6.1 |
 | 9              | 9-stable   | >= 2.3.0 | >= 4.2, < 5.3 |
 | 8              | 8-stable   | >= 2.2.0 | >= 4.2, < 5.2 |
@@ -97,7 +96,7 @@ are welcome.
 | 2              | 2.7-stable | >= 1.8.7 | >= 3.0, < 4   |
 | 1              | rails2     | >= 1.8.7 | >= 2.3, < 3   |
 
-Experts: to install incompatible versions of activerecord, see 
+Experts: to install incompatible versions of activerecord, see
 `paper_trail/compatibility.rb`.
 
 ### 1.b. Installation
@@ -109,7 +108,7 @@ Experts: to install incompatible versions of activerecord, see
 1. Add a `versions` table to your database:
 
     ```
-    bundle exec rails generate paper_trail:install [--with-changes] [--with-associations]
+    bundle exec rails generate paper_trail:install [--with-changes]
     ```
 
     For more information on this generator, see [section 5.c.
@@ -431,6 +430,14 @@ a.versions.length                         # 2
 a.paper_trail.previous_version.title      # 'My Title'
 ```
 
+The `:ignore` option can also accept `Hash` arguments that we are considering deprecating.
+
+```ruby
+class Article < ActiveRecord::Base
+  has_paper_trail ignore: [:title, { color: proc { |obj| obj.color == "Yellow" } }]
+end
+```
+
 #### Only
 
 Or, you can specify a list of the `only` attributes you care about:
@@ -453,11 +460,11 @@ a.versions.length                         # 2
 a.paper_trail.previous_version.content    # nil
 ```
 
-The `:ignore` and `:only` options can also accept `Hash` arguments.
+The `:only` option can also accept `Hash` arguments that we are considering deprecating.
 
 ```ruby
 class Article < ActiveRecord::Base
-  has_paper_trail only: { title: Proc.new { |obj| !obj.title.blank? } }
+  has_paper_trail only: [{ title: Proc.new { |obj| !obj.title.blank? } }]
 end
 ```
 
@@ -641,6 +648,7 @@ Undeleting is just as simple:
 widget = Widget.find(42)
 widget.destroy
 # Time passes....
+widget = Widget.new(id:42)    # creating a new object with the same id, re-establishes the link
 versions = widget.versions    # versions ordered by versions.created_at, ascending
 widget = versions.last.reify  # the widget as it was before destruction
 widget.save                   # the widget lives!
@@ -889,17 +897,19 @@ string, please try the [paper_trail-globalid][37] gem.
 
 To track and reify associations, use [paper_trail-association_tracking][6] (PT-AT).
 
-From 2014 to 2018, association tracking was part of PT core as an experimental
-feature, but many issues were discovered. To attract new volunteers to address
-these issues, PT-AT was extracted (see
-https://github.com/paper-trail-gem/paper_trail/issues/1070).
+From 2014 to 2018, association tracking was an experimental feature, but many
+issues were discovered. To attract new volunteers to address these issues, PT-AT
+was extracted (see https://github.com/paper-trail-gem/paper_trail/issues/1070).
 
-Even though this has always been an experimental feature, we don't want the
-extraction of PT-AT to be a breaking change. In PT 9, PT-AT was kept as a
-runtime dependency. In PT 10, it is a development dependency, so if you use it
-you must add it to your own `Gemfile`. We will keep PT-AT as a development
-dependency and continue running the existing tests related to association
-tracking for as long as is practical.
+Even though it had always been an experimental feature, we didn't want the
+extraction of PT-AT to be a breaking change, so great care was taken to remove
+it slowly.
+
+- In PT 9, PT-AT was kept as a runtime dependency.
+- In PT 10, it became a development dependency (If you use it you must add it to
+  your own `Gemfile`) and we kept running all of its tests.
+- In PT 11, it will no longer be a development dependency, and it is responsible
+  for its own tests.
 
 #### 4.b.1 The optional `item_subtype` column
 
@@ -1225,7 +1235,7 @@ add_column :versions, :new_object, :jsonb # or :json
 
 PaperTrail::Version.where.not(object: nil).find_each do |version|
   version.update_column(:new_object, YAML.load(version.object))
-  
+
   # if version.object_changes
   #   version.update_column(
   #     :new_object_changes,
@@ -1591,6 +1601,7 @@ require 'paper_trail/frameworks/rspec'
 
 ## Articles
 
+* [PaperTrail Gem Tutorial](https://stevepolito.design/blog/paper-trail-gem-tutorial/), 20th April 2020.
 * [Jutsu #8 - Version your RoR models with PaperTrail](http://samurails.com/gems/papertrail/),
   [Thibault](http://samurails.com/about-me/), 29th September 2014
 * [Versioning with PaperTrail](http://www.sitepoint.com/versioning-papertrail),
@@ -1678,4 +1689,3 @@ Released under the MIT licence.
 [54]: https://rubygems.org/gems/paper_trail
 [55]: https://api.dependabot.com/badges/compatibility_score?dependency-name=paper_trail&package-manager=bundler&version-scheme=semver
 [56]: https://dependabot.com/compatibility-score.html?dependency-name=paper_trail&package-manager=bundler&version-scheme=semver
-[57]: https://github.com/paper-trail-gem/paper_trail/blob/master/doc/temporarily_not_accepting_issues.md

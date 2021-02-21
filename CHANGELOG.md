@@ -17,6 +17,40 @@ recommendations of [keepachangelog.com](http://keepachangelog.com/).
 
 - None
 
+## 11.0.0 (2020-08-24)
+
+### Breaking Changes
+
+- [#1221](https://github.com/paper-trail-gem/paper_trail/pull/1221)
+  If you use the experimental association-tracking feature, and you forget to
+  install the `paper_trail-association_tracking` gem, then, when you call
+  `track_associations=` you will get a `NoMethodError` instead of the previous
+  detailed error. Normally the removal of such a temporary warning would not be
+  treated as a breaking change, but since this relates to PT-AT, it seemed
+  warranted.
+- `VersionConcern#sibling_versions` is now private, and its arity has changed.
+
+### Added
+
+- None
+
+### Fixed
+
+- [#1242](https://github.com/paper-trail-gem/paper_trail/issues/1242) -
+  Generator make wrong migration for Oracle database
+
+- [#1238](https://github.com/paper-trail-gem/paper_trail/pull/1238) -
+  Query optimization in `reify`
+
+- [#1256](https://github.com/paper-trail-gem/paper_trail/pull/1256) -
+  Skip version for timestamp when changed attributed is ignored via Hash
+
+### Dependencies
+
+- Drop support for rails <= 5.1 (reached EOL when 6.0 was released,
+  per https://guides.rubyonrails.org/maintenance_policy.html)
+- Drop support for ruby 2.3 (reached EOL on 2019-04-01)
+
 ## 10.3.1 (2019-07-31)
 
 ### Breaking Changes
@@ -33,9 +67,9 @@ recommendations of [keepachangelog.com](http://keepachangelog.com/).
 
 ### Dependencies
 
-- [#1213](https://github.com/paper-trail-gem/paper_trail/pull/1213) - Allow 
+- [#1213](https://github.com/paper-trail-gem/paper_trail/pull/1213) - Allow
   contributors to install incompatible versions of ActiveRecord.
-  See discussion in paper_trail/compatibility.rb 
+  See discussion in paper_trail/compatibility.rb
 
 ## 10.3.0 (2019-04-09)
 

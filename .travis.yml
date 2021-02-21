@@ -12,15 +12,13 @@ env:
 
 sudo: false
 
-services:
-  - mysql
-
-gemfile:
-  - gemfiles/ar_5.0.gemfile
-
 before_install:
   - gem update bundler
 
+gemfile:
+  - gemfiles/ar_5.0.gemfile
 matrix:
   fast_finish: true
 
+services:
+  - mysql
