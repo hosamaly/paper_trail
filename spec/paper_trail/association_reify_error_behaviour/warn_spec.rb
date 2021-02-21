@@ -9,8 +9,8 @@ RSpec.describe PaperTrail, versioning: true do
 
   # See https://github.com/paper-trail-gem/paper_trail/issues/594
   describe "#association reify error behaviour" do
-    it "association reify error behaviour = :ignore" do
-      ::PaperTrail.config.association_reify_error_behaviour = :ignore
+    it "association reify error behaviour = :warn" do
+      ::PaperTrail.config.association_reify_error_behaviour = :warn
 
       person = Person.create(name: "Frank")
       thing = Thing.create(name: "BMW 325")
@@ -18,11 +18,11 @@ RSpec.describe PaperTrail, versioning: true do
 
       person.thing = thing
       person.thing_2 = thing2
-      person.update_attributes(name: "Steve")
+      person.update(name: "Steve")
 
-      thing.update_attributes(name: "BMW 330")
-      thing.update_attributes(name: "BMX 2.0")
-      person.update_attributes(name: "Peter")
+      thing.update(name: "BMW 330")
+      thing.update(name: "BMX 2.0")
+      person.update(name: "Peter")
 
       expect(person.reload.versions.length).to(eq(3))
 
@@ -32,8 +32,8 @@ RSpec.describe PaperTrail, versioning: true do
 
       person.reload.versions.second.reify(has_one: true)
 
-      expect(logger).not_to(
-        have_received(:warn).with(/Unable to reify has_one association/)
+      expect(logger).to(
+        have_received(:warn).with(/Unable to reify has_one association/).twice
       )
     end
   end

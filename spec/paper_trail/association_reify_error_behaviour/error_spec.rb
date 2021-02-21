@@ -18,18 +18,18 @@ RSpec.describe PaperTrail, versioning: true do
 
       person.car = car
       person.bicycle = bicycle
-      person.update_attributes(name: "Steve")
+      person.update(name: "Steve")
 
-      car.update_attributes(name: "BMW 330")
-      bicycle.update_attributes(name: "BMX 2.0")
-      person.update_attributes(name: "Peter")
+      car.update(name: "BMW 330")
+      bicycle.update(name: "BMX 2.0")
+      person.update(name: "Peter")
 
       expect(person.reload.versions.length).to(eq(3))
 
       expect {
         person.reload.versions.second.reify(has_one: true)
       }.to(
-        raise_error(::PaperTrail::Reifiers::HasOne::FoundMoreThanOne) do |err|
+        raise_error(::PaperTrailAssociationTracking::Reifiers::HasOne::FoundMoreThanOne) do |err|
           expect(err.message.squish).to match(
             /Expected to find one Vehicle, but found 2/
           )

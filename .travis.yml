@@ -18,6 +18,9 @@ services:
 gemfile:
   - gemfiles/ar_5.0.gemfile
 
+before_install:
+  - gem update bundler
+
 matrix:
   fast_finish: true
 

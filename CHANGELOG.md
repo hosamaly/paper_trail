@@ -17,6 +17,130 @@ recommendations of [keepachangelog.com](http://keepachangelog.com/).
 
 - None
 
+## 10.3.1 (2019-07-31)
+
+### Breaking Changes
+
+- None
+
+### Added
+
+- None
+
+### Fixed
+
+- None
+
+### Dependencies
+
+- [#1213](https://github.com/paper-trail-gem/paper_trail/pull/1213) - Allow 
+  contributors to install incompatible versions of ActiveRecord.
+  See discussion in paper_trail/compatibility.rb 
+
+## 10.3.0 (2019-04-09)
+
+### Breaking Changes
+
+- None
+
+### Added
+
+- [#1194](https://github.com/paper-trail-gem/paper_trail/pull/1194) -
+  Added a 'limit' option to has_paper_trail, allowing models to override the
+  global `PaperTrail.config.version_limit` setting.
+
+### Fixed
+
+- [#1196](https://github.com/paper-trail-gem/paper_trail/pull/1196) -
+  In the installation migration, change `versions.item_id` from 4 byte integer
+  to 8 bytes (bigint).
+
+## 10.2.1 (2019-03-14)
+
+### Breaking Changes
+
+- None
+
+### Added
+
+- None
+
+### Fixed
+
+- [#1184](https://github.com/paper-trail-gem/paper_trail/pull/1184) -
+  No need to calculate previous values of skipped attributes
+- [#1188](https://github.com/paper-trail-gem/paper_trail/pull/1188) -
+  Optimized the memory allocations during the building of every particular
+  Version object. That can help a lot for heavy bulk processing.
+  In additional we advise to use `json[b]` DB types for `object`
+  and `object_changes` Version columns, in order to reach best possible
+  RAM performance.
+
+## 10.2.0 (2019-01-31)
+
+### Breaking Changes
+
+- None
+
+### Added
+
+- Support ruby 2.6.0
+- [#1182](https://github.com/paper-trail-gem/paper_trail/pull/1182) -
+  Support rails 6.0.0.beta1
+
+### Fixed
+
+- [#1177](https://github.com/paper-trail-gem/paper_trail/pull/1177) -
+  Do not store ignored and skipped attributes in `object_changes` on destroy.
+
+### Deprecated
+
+- [#1176](https://github.com/paper-trail-gem/paper_trail/pull/1176) -
+  `config.paper_trail.enabled`
+
+## 10.1.0 (2018-12-04)
+
+### Breaking Changes
+
+- None
+
+### Deprecated
+
+- [#1158](https://github.com/paper-trail-gem/paper_trail/pull/1158) - Passing
+  association name as `versions:` option or Version class name as `class_name:`
+  options directly to `has_paper_trail`. Use `has_paper_trail versions: {name:
+  :my_name, class_name: "MyVersionModel"}` instead.
+
+### Added
+
+- [#1166](https://github.com/paper-trail-gem/paper_trail/pull/1166) -
+  New global option `has_paper_trail_defaults`, defaults for `has_paper_trail`
+- [#1158](https://github.com/paper-trail-gem/paper_trail/pull/1158) — Add the
+  ability to pass options, such as `scope` or `extend:` to the `has_many
+  :versions` association macro.
+- [#1172](https://github.com/paper-trail-gem/paper_trail/pull/1172) -
+  Support rails 6.0.0.alpha
+
+### Fixed
+
+- None
+
+## 10.0.1 (2018-09-01)
+
+### Breaking Changes
+
+- None
+
+### Added
+
+- None
+
+### Fixed
+
+- [#1150](https://github.com/paper-trail-gem/paper_trail/pull/1150) - When PT-AT
+  is not loaded, and someone sets `track_associations = false`, it should
+  `warn`, not `raise`.
+
 ## 10.0.0 (2018-09-01)
 
 PT 10 tackles some tough issues that required breaking changes. We fixed a
@@ -78,8 +202,7 @@ respectively.
 
 - [#1070](https://github.com/paper-trail-gem/paper_trail/issues/1070) -
   The experimental associations tracking feature has been moved to a separate
-  gem, [paper_trail-association_tracking]
-  (https://github.com/westonganger/paper_trail-association_tracking). PT will,
+  gem, [paper_trail-association_tracking](https://github.com/westonganger/paper_trail-association_tracking). PT will,
   for now, have a runtime dependency on this new gem. So, assuming the gem
   extraction goes well, no breaking changes are anticipated.
 - [#1093](https://github.com/paper-trail-gem/paper_trail/pull/1093) -
@@ -982,7 +1105,7 @@ in the `PaperTrail::Version` class through a `Rails::Engine` when the gem is use
     `ActionController::API` for compatibility with the [`rails-api`](https://github.com/rails-api/rails-api) gem.
   - [#312](https://github.com/paper-trail-gem/paper_trail/issues/312) - Fix RSpec `with_versioning` class level helper method.
   - `model_instance.without_versioning` now yields the `model_instance`, enabling syntax like this:
-    `model_instance.without_versioning { |obj| obj.update_attributes(:name => 'value') }`.
+    `model_instance.without_versioning { |obj| obj.update(:name => 'value') }`.
   - Deprecated `Model.paper_trail_on` and `Model.paper_trail_off` in favor of bang versions of the methods.
     Deprecation warning informs users that the non-bang versions of the methods will be removed in version `4.0`
 
